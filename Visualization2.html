@@ -1,0 +1,261 @@
+<html>
+<head>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <style>
+        .land {
+            fill: none;
+            stroke: black;
+            stroke-width: .5px;
+        }
+        .state-boundary {
+            fill: none;
+            stroke: black;
+            stroke-width: .5px;
+        }
+    </style>
+</head>
+<body>
+    <div id = "canvas">
+    </div>
+
+<script>
+
+/**GLOBAL VARIABLES */
+/** *************** */
+    var svg = d3.select("#canvas")
+        .append("svg")
+        .attr("height", 1000)
+        .attr("width", 1000);       
+
+    var projection = d3.geo.albersUsa();
+
+    var path = d3.geo.path()
+            .projection(projection);
+
+    /**Part of test code to get border data*/
+    var borders = [];
+    var test1 = [];
+    var pixelBorders = [];
+    var pixelBordersFiltered = [];
+    /** ** */ 
+
+    /**Global data arrays*/
+    var waterLevel = {};
+    var waterCoasts = [];
+    var elevations = {};
+    var waterFlow = [];
+    /** ** */
+
+     var test8 = [];
+
+    /**Helpful global variables */
+    var doneWithWaterUpdate = false; //Variable that is set to true when after a slider change, the updating of water
+                                     //elevation drawings is finished.
+    /** ** */
+
+
+/** ************* **/
+/** ************* **/
+
+/** HELPER FUNCTONS **/
+/** *************** **/
+    function appendBlueCircle(x, y) {
+        svg.append("circle")
+        .attr("class", "water")
+        .attr("cx", x)
+        .attr("cy", y)
+        .attr("r", 50); 
+
+
+    }
+/** *************** **/
+/** *************** **/
+
+/** Initializes data for our visualization **/
+
+    //Creates a working set of data for our map of the United States.
+    d3.json("us.json", function(error, us) {
+    /*  svg.insert("path", ".landPath")
+          .datum(topojson.feature(us, us.objects.land))
+          .attr("class", "land")
+          .attr("d", path); */ 
+          
+      svg.insert("path", ".graticule")
+          .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+          .attr("class", "state-boundary")
+          .attr("d", path);
+        
+        /**Part of test code to get border data*/
+
+        //Following code collapses the topoJSON array to a normal array for use in coastal border calculations.
+        borders = topojson.feature(us, us.objects.land);
+        var test2 = borders.geometry.coordinates;
+        var test3 = [];
+        var test4 = test3.concat.apply(test3, test2);
+        var test5 = test3.concat.apply(test3, test4);
+        test1 = test5;
+
+        test1.forEach(function(el) {
+                pixelBorders.push(projection(el));
+            });
+       
+        //Filters out the pixelBorders array so that it only contains US border points
+        //that are touching some point of water. 
+        pixelBordersFiltered = pixelBorders.filter(function(el) {
+                                        if(el == null) {
+                                            return false;
+                                        }
+                                        //Projected pixel value of each longitude, latitude element in array
+                                        var pixel;
+                                        var pixel2;
+                                        var pixel3;
+
+                                        pixel = projection([-122, 45]);
+                                        pixel2 = projection([-95, 45]);
+
+                                        //Each of the below if statements gets rid of a border line that does not touch a body of water
+                                        if((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel2[0])) {
+                                            return false;
+                                        }
+
+                                        pixel = projection([-94, 48]);
+                                        pixel2 = projection([-89, 48]);
+
+                                        if((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel2[0])) {
+                                            return false;
+                                        }
+
+                                        pixel = projection([-76, 44]);
+                                        pixel2 = projection([-67, 44.9]);
+                                        pixel3 = projection([-69, 44]);
+                                        var topRightBorderBool = ((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel3[0])) 
+                                            || ((el[0] >= pixel2[0]) && (el[1] <= pixel2[1]));
+
+                                         if(topRightBorderBool) {
+                                            return false;
+                                        } 
+
+                                        pixel = projection([-117 ,32.8]);
+                                        pixel2 = projection([-97.8, 26]);
+                                        
+                                        topRightBorderBool = ((el[0] >= pixel[0]) && (el[1] >= pixel[1]) && (el[0] <= pixel2[0])) 
+                                            || ((el[0] >= pixel2[0]) && (el[1] >= pixel2[1]));
+
+                                         if(topRightBorderBool) {
+                                            return false;
+                                        } 
+
+                                        return true; 
+                                        
+                                        
+                                        
+                                    });
+
+        waterCoasts = pixelBordersFiltered;
+
+        var lineTest = d3.svg.line()
+                        .x(function(d) {return d[0];})
+                        .y(function(d) {return d[1];})
+                        .interpolate("linear");
+        svg.append("path")
+            .attr("d", lineTest(pixelBordersFiltered))
+            .attr("class", "land");
+        /** ** */
+
+        /**CONCLUSION: pixelBordersFiltered contains the pixel values of the borders of the United States. I will modularize later. **/
+          }); 
+
+    //Loads the elevation data into our code.
+    d3.json("elevation.json", function(error, elevation) {
+        var newProjEl = []; //New projection generated by projection function.
+        var newEl; //New data to be stored into elevations array.
+        test8 = elevation.elevations;
+        (elevation.elevations).forEach(function(el) {
+            newProjEl = projection([el.x, el.y]); 
+            if(!(newProjEl === null)) {
+                newEl = {x: newProjEl[0], y: newProjEl[1]}; 
+                elevations[newEl] = el.Elevation;
+            }
+        });
+    });
+
+    //Loads the water level data into our code.
+    d3.csv("seaLevel.csv", function(d) {
+        d.forEach(function(el) {
+            waterLevel[el.Year] = el.seaLevel; 
+        });
+    });
+/** **** **/
+
+/** Creates slider and deals with slider interaction **/
+    
+    //Slider for propagating water flow change
+    d3.select("body")
+        .attr("class", "slider")
+        .attr("id", "elevationSlider")
+        .append("input")
+        .attr("type", "range")
+        .attr("min", "2014")
+        .attr("max", "7014")
+        .attr("value", "0");
+
+    //Slider for non-propagating water flow change
+    d3.select("body")
+        .attr("class", "slider")
+        .attr("id", "noPropSlider")
+        .append("input")
+        .attr("type", "range")
+        .attr("min", "2014")
+        .attr("max", "7014")
+        .attr("value", "0");
+
+
+    d3.select("#elevationSlider").on("change", elevationChange); 
+    d3.select("#noPropSlier").on("change", noPropChange);
+
+    //Overall function that on change for the non-propagating slider, updates water coloring on map.
+    var noPropChange = function() {
+        var waterElevation = waterLevel[this.value]; //The water elevation for a given year.
+        elevations.forEach(function(el, ind) {
+            if(el < waterElevation) {
+                appendNewCircle(ind.x, ind.y); 
+            }
+        });
+    }
+
+    //Overall function that on change for the water slider for the propagating water flow, updates water coloring on map.
+    var elevationChange = function() {
+        var waterElevation = waterLevel[this.value]; //The water elevation for a given year.
+        waterFlow = waterCoasts;
+        doneWithWaterUpdate = true;
+        while(doneWithWaterUpdate) {
+            doneWithWaterUpdate = false;
+            waterFlow.forEach(function(el) {
+                var x = Math.round(el.x);    
+                var y = Math.round(el.y);
+                helper(x, y, waterElevation);
+            });
+        }
+        
+    }
+   
+    //Helper function that given an input x and y pixel, checks to see if elevation level is below water elevation level
+    //at that point in time.
+    var helper = function(x, y, water) {
+        var elevationPoint = {x: x, y: y};
+        if(typeof elevations[elevationPoint] == 'undefined') {
+        } 
+        else if(elevations[elevationPoint] < water) {
+            appendBlueCircle(elevationPoint.x, elevationPoint.y);
+            waterFlow.push(elevationPoint);
+            doneWithWaterUpdate = true;
+        }
+    }
+/** ********* **/
+
+</script>
+
+</body>
+
+</html>
