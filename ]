@@ -13,10 +13,6 @@
             stroke: black;
             stroke-width: .5px;
         }
-        .water {
-
-            fill: blue;
-        }
     </style>
 </head>
 <body>
@@ -49,16 +45,12 @@
     var waterCoasts = [];
     var elevations = [];
     var waterFlow = [];
-    var unchecked = [];
     /** ** */
 
-    //Radius of circles for our pixel water circles.
-    var radius = 6.5;
-
-//     var test8 = [];
+     var test8 = [];
 
     /**Helpful global variables */
- //   var doneWithWaterUpdate = false; //Variable that is set to true when after a slider change, the updating of water
+    var doneWithWaterUpdate = false; //Variable that is set to true when after a slider change, the updating of water
                                      //elevation drawings is finished.
     /** ** */
 
@@ -73,80 +65,23 @@
         .attr("class", "water")
         .attr("cx", x)
         .attr("cy", y)
-        .attr("r", radius); 
-
+        .attr("r", 50); 
         
     }
 
     //Overall function that on change for the non-propagating slider, updates water coloring on map.
     var noPropChange = function() {
-
-        d3.selectAll(".water").remove();
-
-        var rangeVal = this.value; 
-        var waterElevation = waterLevel[rangeVal]; //The water elevation for a given year.
+        alert(this.value);
+        var waterElevation = waterLevel[this.value]; //The water elevation for a given year.
         elevations.forEach(function(el) {
+                alert(el.elevation);
+                alert(waterElevation);
             if(el.elevation < waterElevation) {
                 appendBlueCircle(el.x, el.y); 
 
             }
         });
     }
-
-    //Copies all the elements of an array into a copy, not just copy the reference.
-    var deepCopy = function(orig, copy) {
-        copy = [];
-        orig.forEach(function(el) {
-            copy.push(el);
-        });
-        return copy;
-    }
-
-    //Helper function that gets the distance between two pixel points.
-    var getDistance = function(x1, y1, x2, y2) {
-        var dist = Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2);
-        dist = Math.sqrt(dist);
-        return dist;
-    }
-
-    var checkRadii = function(x, y, water) {
-        var dist;
-        unchecked.forEach(function(el, ind) {
-            dist = getDistance(el.x, el.y, x, y);
-            if(dist <= (2 * radius)) {
-                unchecked.splice(ind, 1);
-                if(el.elevation < water) {
-                    waterFlow.push([el.x, el.y]);
-                    appendBlueCircle(el.x, el.y);
-                }
-            }
-            else if(el.elevation >= water) {
-                unchecked.splice(ind, 1);
-            }
-        });
-
-    }
-
-    //Overall function that on change for the water slider for the propagating water flow, updates water coloring on map.
-    var elevationChange = function() {
-        d3.selectAll(".water").remove();
-
-        var waterElevation = waterLevel[this.value]; //The water elevation for a given year.
-        waterFlow = deepCopy(waterCoasts, waterFlow);
-        var el;
-       //Lets you only see the coastlines that touch bodies of water: waterFlow.forEach(function(d) {appendBlueCircle(d[0], d[1])});
-        unchecked = deepCopy(elevations, unchecked); 
-        while(waterFlow.length > 0) {
-            el = waterFlow.shift();
-            //Also lets you see coastlines: appendBlueCircle(el[0], el[1]);
-            checkRadii(el[0], el[1], waterElevation);
-        }
-        
-        
-    }
-
-    
-
 /** *************** **/
 /** *************** **/
 
@@ -157,7 +92,7 @@
        svg.insert("path", ".landPath")
           .datum(topojson.feature(us, us.objects.land))
           .attr("class", "land")
-          .attr("d", path); 
+          .attr("d", path);  
           
       svg.insert("path", ".graticule")
           .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
@@ -181,64 +116,64 @@
         //Filters out the pixelBorders array so that it only contains US border points
         //that are touching some point of water. 
         pixelBordersFiltered = pixelBorders.filter(function(el) {
-            if(el == null) {
-                return false;
-            }
-            //Projected pixel value of each longitude, latitude element in array
-            var pixel;
-            var pixel2;
-            var pixel3;
+                                        if(el == null) {
+                                            return false;
+                                        }
+                                        //Projected pixel value of each longitude, latitude element in array
+                                        var pixel;
+                                        var pixel2;
+                                        var pixel3;
 
-            pixel = projection([-122, 45]);
-            pixel2 = projection([-95, 45]);
+                                        pixel = projection([-122, 45]);
+                                        pixel2 = projection([-95, 45]);
 
-            //Each of the below if statements gets rid of a border line that does not touch a body of water
-            if((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel2[0])) {
-                return false;
-            }
+                                        //Each of the below if statements gets rid of a border line that does not touch a body of water
+                                        if((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel2[0])) {
+                                            return false;
+                                        }
 
-            pixel = projection([-94, 48]);
-            pixel2 = projection([-89, 48]);
+                                        pixel = projection([-94, 48]);
+                                        pixel2 = projection([-89, 48]);
 
-            if((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel2[0])) {
-                return false;
-            }
+                                        if((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel2[0])) {
+                                            return false;
+                                        }
 
-            pixel = projection([-76, 44]);
-            pixel2 = projection([-67, 44.9]);
-            pixel3 = projection([-69, 44]);
-            var topRightBorderBool = ((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel3[0])) 
-                || ((el[0] >= pixel2[0]) && (el[1] <= pixel2[1]));
+                                        pixel = projection([-76, 44]);
+                                        pixel2 = projection([-67, 44.9]);
+                                        pixel3 = projection([-69, 44]);
+                                        var topRightBorderBool = ((el[0] >= pixel[0]) && (el[1] <= pixel[1]) && (el[0] <= pixel3[0])) 
+                                            || ((el[0] >= pixel2[0]) && (el[1] <= pixel2[1]));
 
-             if(topRightBorderBool) {
-                return false;
-            } 
+                                         if(topRightBorderBool) {
+                                            return false;
+                                        } 
 
-            pixel = projection([-117 ,32.8]);
-            pixel2 = projection([-97.8, 26]);
-            
-            topRightBorderBool = ((el[0] >= pixel[0]) && (el[1] >= pixel[1]) && (el[0] <= pixel2[0])) 
-                || ((el[0] >= pixel2[0]) && (el[1] >= pixel2[1]));
+                                        pixel = projection([-117 ,32.8]);
+                                        pixel2 = projection([-97.8, 26]);
+                                        
+                                        topRightBorderBool = ((el[0] >= pixel[0]) && (el[1] >= pixel[1]) && (el[0] <= pixel2[0])) 
+                                            || ((el[0] >= pixel2[0]) && (el[1] >= pixel2[1]));
 
-             if(topRightBorderBool) {
-                return false;
-            } 
+                                         if(topRightBorderBool) {
+                                            return false;
+                                        } 
 
-            return true; 
-            
-            
-            
-            });
+                                        return true; 
+                                        
+                                        
+                                        
+                                    });
 
         waterCoasts = pixelBordersFiltered;
 
-       /* var lineTest = d3.svg.line()
+        /**var lineTest = d3.svg.line()
                         .x(function(d) {return d[0];})
                         .y(function(d) {return d[1];})
                         .interpolate("linear");
         svg.append("path")
             .attr("d", lineTest(pixelBordersFiltered))
-            .attr("class", "land");*/
+            .attr("class", "land");
         /** ** */
 
         /**CONCLUSION: pixelBordersFiltered contains the pixel values of the borders of the United States. I will modularize later. **/
@@ -252,18 +187,11 @@
         (elevation.elevations).forEach(function(el) {
             newProjEl = projection([el.x, el.y]); 
             if(!(newProjEl === null)) {
-                /*alert(el.x);
-                alert(el.y);
-                alert(newProjEl[0]);
-                alert(newProjEl[1]); */
                 newEl = {x: newProjEl[0], y: newProjEl[1], elevation: el.Elevation}; 
                 elevations.push(newEl);
-
             }
         });
-
     });
-
 
     //Loads the water level data into our code.
     d3.csv("seaLevel.csv", function(d) {
@@ -277,35 +205,61 @@
     
     //Slider for propagating water flow change
     d3.select("body")
-        .append("input")
         .attr("class", "slider")
         .attr("id", "elevationSlider")
+        .append("input")
         .attr("type", "range")
-        .attr("min", 2014)
-        .attr("max", 52014)
-        .attr("step", 1)
-        .attr("value", 0);
+        .attr("min", "2014")
+        .attr("max", "7014")
+        .attr("value", "0");
 
     //Slider for non-propagating water flow change
     d3.select("body")
-        .append("input")
         .attr("class", "slider")
         .attr("id", "noPropSlider")
+        .append("input")
         .attr("type", "range")
-        .attr("min", 2014)
-        .attr("max", 52014)
-        .attr("step", 1)
-        .attr("value", 0);
+        .attr("min", "2014")
+        .attr("max", "7014")
+        .attr("value", "0");
 
 
     d3.select("#elevationSlider").on("change", elevationChange); 
-    d3.select("#noPropSlider").on("change", noPropChange);
+    d3.select("#noPropSlider").on("change", function() {
+
+        alert(this.value);
+        var waterElevation = waterLevel[this.value]; //The water elevation for a given year.
+        elevations.forEach(function(el) {
+                alert(el.elevation);
+                alert(waterElevation);
+            if(el.elevation < waterElevation) {
+                appendBlueCircle(el.x, el.y); 
+
+            }
+        });
+            });
+          //  noPropChange);
 
 
+    //Overall function that on change for the water slider for the propagating water flow, updates water coloring on map.
+    var elevationChange = function() {
+        var waterElevation = waterLevel[this.value]; //The water elevation for a given year.
+        waterFlow = waterCoasts;
+        doneWithWaterUpdate = true;
+        while(doneWithWaterUpdate) {
+            doneWithWaterUpdate = false;
+            waterFlow.forEach(function(el) {
+                var x = Math.round(el.x);    
+                var y = Math.round(el.y);
+                helper(x, y, waterElevation);
+            });
+        }
+        
+    }
    
     //Helper function that given an input x and y pixel, checks to see if elevation level is below water elevation level
     //at that point in time.
-    /*var helper = function(x, y, water) {
+    var helper = function(x, y, water) {
         var elevationPoint = {x: x, y: y};
         if(typeof elevations[elevationPoint] == 'undefined') {
         } 
@@ -314,8 +268,7 @@
             waterFlow.push(elevationPoint);
             doneWithWaterUpdate = true;
         }
-    }*/
-
+    }
 /** ********* **/
 
 </script>
