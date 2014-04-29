@@ -1,0 +1,57 @@
+#back{
+    background: black;
+}
+
+#content{
+    border: 10px solid black;
+    border-radius: 15px;
+    width: 1200px;
+    height: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    background: white;
+    text-align: center;
+
+    font-family: 'Libre Baskerville', 'serif';
+}
+
+h1{
+    font-size: 48pt;
+    font-weight: 900;
+}
+
+h2{
+    font-size: 20pt;
+    padding-bottom: 25px;
+}
+
+#cities{
+    font-weight: bold;
+}
+
+#year{
+    font: 18pt bold;
+}
+
+path{
+    fill: white;
+}
+
+#canvas{
+    background: blue;
+    width: 1100px;
+    height: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 15px;
+    padding: 15px;
+}
+
+#header{
+    padding: 10px;
+    text-align: center;
+}
+
+.slider{
+    orientation: vertical;
+}

@@ -2,7 +2,9 @@
 <head>
     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script src="http://d3js.org/topojson.v1.min.js"></script>
-    <link rel = "stylesheet" type = "text/css" href = "loader.css">
+    <link href='http://fonts.googleapis.com/css?family=Libre+Baskerville' rel='stylesheet' type='text/css' />
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+
     <style>
         .land {
             fill: none;
@@ -12,7 +14,6 @@
         .state-boundary {
             fill: none;
             stroke: black;
-            fill: blue;
             stroke-width: .5px;
         }
         .water {
@@ -35,21 +36,24 @@
     </style>
 </head>
 <body>
-<div class = "loadDiv">
-    <div class="placeholder">
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-    </div>
-</div>
+    <div id = "back">
+        <div id="content">
+            <div id="header">
+                <h1>Sinking of the United States</h1>
+                <h2>By Chetan Gupta, Derek Chen, and John Proserpio<br/></h2>
+                <p class = "title">Current year: <span id='year'>2014</span>
+                </p>
+            </div>
+
+
     <div id = "canvas">
     </div>
 
+            <div id='cityInfo'>
+                <p id='cities'></p>
+            </div>
+        </div>
+    </div>
 
 <script>
 
@@ -121,15 +125,21 @@
     //Overall function that on change for the non-propagating slider, updates water coloring on map.
     var noPropChange = function() {
         
-        //Starts the load animation.
-        d3.select(".placeholder").attr("class", "loader");
+        var currentYear = this.value;
+        d3.selectAll(".water").remove();
+        d3.select('#year').text(currentYear);
+        d3.select('#cities').text(function(){
+            if (currentYear >= 2100) {
+                return "Major cities now underwater: Los Angeles, CA | New York, NY | New Orleans, LA | Miami, FL | Virginia Beach, VA | San Francisco, CA | Boston, MA | Hoboken, NJ";
+            }
+            else{
+                return "";
+            }
+        });
 
         var rangeVal = this.value; 
 
-        //Point of timeout function gives time for load visualization to start.
-        setTimeout(function() {
 
-        d3.selectAll(".water").remove();
 
         var waterElevation = waterLevel[rangeVal]; //The water elevation for a given year.
         elevations.forEach(function(el) {
@@ -138,9 +148,7 @@
 
             }
         });
-        d3.select(".loader").attr("class", "placeholder");
-    }, 4000);
-    }
+    } 
 
     //Copies all the elements of an array into a copy, not just copy the reference.
     var deepCopy = function(orig, copy) {
@@ -179,8 +187,6 @@
     //Overall function that on change for the water slider for the propagating water flow, updates water coloring on map.
     var elevationChange = function() {
 
-        //Starts the load animation.
-        d3.select(".placeholder").attr("class", "loader");
 
         d3.selectAll(".water").remove();
 
@@ -195,8 +201,21 @@
             checkRadii(el[0], el[1], waterElevation);
         }
         
-       d3.select(".loader").attr("class", "placeholder"); 
         
+    }
+
+    var elevationClick = function() {
+        d3.selectAll(".slider")
+            .style("display", "block");
+        d3.select("#canvas")
+            .style("background-color", "blue");
+
+        d3.selectAll(".state-boundary")
+            .style("fill", "white");
+
+        mode = 1;
+
+
     }
 
     var rainClick = function() {
@@ -204,35 +223,55 @@
         var abb;
         var color; 
         var state;
+
+        mode = 2; 
+
+        d3.select("#cities")
+            .html("");
+
+        d3.selectAll(".slider")
+            .attr("value", 2014)
+            .style("display", "none");
+
+        d3.selectAll(".water").remove();
+        d3.select("#canvas")
+            .style("background-color", "#FFFF99");
+
+        d3.select(".title")
+            .html("Current Annual Average Rainfall by State(1971 - 2000)");
+        
         d3.selectAll(".state-boundary")
             .each(function(d, i) {
                 id = d.id;
                 abb = stateCodes[id];   
-                alert(id);
                 color = colorScale(rainfall[abb].rank);
                 d3.select(this).style("fill", color);
                 
 
                 d3.select(this)
                     .on("mouseover", function(d) {
-                        tooltip.style("opacity", 0);
-                        tooltip.transition()
-                            .duration(700)
-                            .style("opacity", .9);
-                        id = d.id;
-                        abb = stateCodes[id];   
-                        state = rainfall[abb];
+                        if(mode == 2) {
+                            tooltip.style("opacity", 0);
+                            tooltip.transition()
+                                .duration(700)
+                                .style("opacity", .9);
+                            id = d.id;
+                            abb = stateCodes[id];   
+                            state = rainfall[abb];
 
-                        tooltip.html("State: " + abb + "<br/><br/> Average Rainfall(mm./yr.): " + 
-                                state.mm + "<br/><br/> Rank: " + state.rank)
-                            .style("left", d3.event.pageX)
-                            .style("top", d3.event.pageY - 28);
+                            tooltip.html("State: " + abb + "<br/><br/> Average Rainfall(mm./yr.): " + 
+                                    state.mm + "<br/><br/> Rank: " + state.rank)
+                                .style("left", d3.event.pageX)
+                                .style("top", d3.event.pageY - 28);
+                        }
                     })
                     .on("mouseout", function(d) {
-                        tooltip.transition()
-                            .duration(700)
-                            .style("opacity", 0);
-                        });
+                        if(mode == 2) {
+                            tooltip.transition()
+                                .duration(700)
+                                .style("opacity", 0);
+                        }
+                    });
             });    
     }
 
@@ -243,18 +282,6 @@
 
 /** Initializes data for our visualization **/
 
- /*d3.json("us-states.json", function(error, us) {
-          svg.insert("path", ".graticule")
-                .data(topojson.feature(us, us.objects["us-states"]).features)
-                .attr("d", path)
-                .attr("class", "state-boundary");
-
-
-        g.append("path")
-                .datum(topojson.mesh(us, us.objects["us-states"], function(a, b) { return a !== b; }))
-                .attr("class", "mesh")
-                .attr("d", path);
-    }); */
 
     //Generates a link between FIPS id code and state abbreviation.
     d3.csv("stateCodes.csv", function(d) {
@@ -275,6 +302,7 @@
        svg.insert("path", ".landPath")
           .datum(topojson.feature(us, us.objects.land))
           .attr("class", "land")
+          .style("fill", "white") 
           .attr("d", path); 
           
       /*svg.insert("path", ".graticule")
@@ -422,11 +450,17 @@
         .attr("step", 1)
         .attr("value", 0);
     
-    //Add checkbox for seeing state rainfall values
+    //Add button for seeing state rainfall values
     d3.select("body")
         .append("button")
         .attr("class", "rainButton")
         .html("See state rainfalls");
+
+    //Add button for seeing water level elevations.
+    d3.select("body")
+        .append("button")
+        .attr("class", "elevationButton")
+        .html("See water level and elevation data");
         
 
     d3.select("#elevationSlider").on("change", elevationChange); 
@@ -436,18 +470,9 @@
     d3.select(".rainButton")
         .on("click", rainClick); 
 
-    //Helper function that given an input x and y pixel, checks to see if elevation level is below water elevation level
-    //at that point in time.
-    /*var helper = function(x, y, water) {
-        var elevationPoint = {x: x, y: y};
-        if(typeof elevations[elevationPoint] == 'undefined') {
-        } 
-        else if(elevations[elevationPoint] < water) {
-            appendBlueCircle(elevationPoint.x, elevationPoint.y);
-            waterFlow.push(elevationPoint);
-            doneWithWaterUpdate = true;
-        }
-    }*/
+    //Deals with when the elevation button is clicked.
+    d3.select(".elevationButton")
+        .on("click", elevationClick);
 
 /** ********* **/
 
