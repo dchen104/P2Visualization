@@ -2,6 +2,7 @@
 <head>
     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <link rel = "stylesheet" type = "text/css" href = "loader.css">
     <style>
         .land {
             fill: none;
@@ -11,22 +12,49 @@
         .state-boundary {
             fill: none;
             stroke: black;
+            fill: blue;
             stroke-width: .5px;
         }
         .water {
 
             fill: blue;
         }
+
+        .tooltip {   
+              position: absolute;           
+              text-align: center;           
+              width: 200px;                  
+              height: 120px;                 
+              padding: 2px;             
+              font: 12px sans-serif;        
+              background: lightsteelblue;   
+              border: 0px;      
+              border-radius: 8px;           
+              pointer-events: none;         
+        } 
     </style>
 </head>
 <body>
+<div class = "loadDiv">
+    <div class="placeholder">
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+</div>
     <div id = "canvas">
     </div>
+
 
 <script>
 
 /**GLOBAL VARIABLES */
-/** *************** */
+/** ****************/
     var svg = d3.select("#canvas")
         .append("svg")
         .attr("height", 1000)
@@ -50,17 +78,29 @@
     var elevations = [];
     var waterFlow = [];
     var unchecked = [];
+    var stateCodes = [];
+    var rainfall = [];
     /** ** */
 
     //Radius of circles for our pixel water circles.
     var radius = 6.5;
 
-//     var test8 = [];
+    //Mode of the visualization. 0 for propagation, 1 for non-propagation, and 2 for rainfall mode. 
+    var mode = 0;
+
+    var colorScale = d3.scale.linear()
+                        .domain([1, 50])
+                        .range(["#000066", "#0000FF"]);
+
+    var test8 = [];
+
+    var tooltip; //Tooltip div
 
     /**Helpful global variables */
  //   var doneWithWaterUpdate = false; //Variable that is set to true when after a slider change, the updating of water
                                      //elevation drawings is finished.
     /** ** */
+
 
 
 /** ************* **/
@@ -80,10 +120,17 @@
 
     //Overall function that on change for the non-propagating slider, updates water coloring on map.
     var noPropChange = function() {
+        
+        //Starts the load animation.
+        d3.select(".placeholder").attr("class", "loader");
+
+        var rangeVal = this.value; 
+
+        //Point of timeout function gives time for load visualization to start.
+        setTimeout(function() {
 
         d3.selectAll(".water").remove();
 
-        var rangeVal = this.value; 
         var waterElevation = waterLevel[rangeVal]; //The water elevation for a given year.
         elevations.forEach(function(el) {
             if(el.elevation < waterElevation) {
@@ -91,6 +138,8 @@
 
             }
         });
+        d3.select(".loader").attr("class", "placeholder");
+    }, 4000);
     }
 
     //Copies all the elements of an array into a copy, not just copy the reference.
@@ -129,6 +178,10 @@
 
     //Overall function that on change for the water slider for the propagating water flow, updates water coloring on map.
     var elevationChange = function() {
+
+        //Starts the load animation.
+        d3.select(".placeholder").attr("class", "loader");
+
         d3.selectAll(".water").remove();
 
         var waterElevation = waterLevel[this.value]; //The water elevation for a given year.
@@ -142,7 +195,45 @@
             checkRadii(el[0], el[1], waterElevation);
         }
         
+       d3.select(".loader").attr("class", "placeholder"); 
         
+    }
+
+    var rainClick = function() {
+        var id;
+        var abb;
+        var color; 
+        var state;
+        d3.selectAll(".state-boundary")
+            .each(function(d, i) {
+                id = d.id;
+                abb = stateCodes[id];   
+                alert(id);
+                color = colorScale(rainfall[abb].rank);
+                d3.select(this).style("fill", color);
+                
+
+                d3.select(this)
+                    .on("mouseover", function(d) {
+                        tooltip.style("opacity", 0);
+                        tooltip.transition()
+                            .duration(700)
+                            .style("opacity", .9);
+                        id = d.id;
+                        abb = stateCodes[id];   
+                        state = rainfall[abb];
+
+                        tooltip.html("State: " + abb + "<br/><br/> Average Rainfall(mm./yr.): " + 
+                                state.mm + "<br/><br/> Rank: " + state.rank)
+                            .style("left", d3.event.pageX)
+                            .style("top", d3.event.pageY - 28);
+                    })
+                    .on("mouseout", function(d) {
+                        tooltip.transition()
+                            .duration(700)
+                            .style("opacity", 0);
+                        });
+            });    
     }
 
     
@@ -152,6 +243,33 @@
 
 /** Initializes data for our visualization **/
 
+ /*d3.json("us-states.json", function(error, us) {
+          svg.insert("path", ".graticule")
+                .data(topojson.feature(us, us.objects["us-states"]).features)
+                .attr("d", path)
+                .attr("class", "state-boundary");
+
+
+        g.append("path")
+                .datum(topojson.mesh(us, us.objects["us-states"], function(a, b) { return a !== b; }))
+                .attr("class", "mesh")
+                .attr("d", path);
+    }); */
+
+    //Generates a link between FIPS id code and state abbreviation.
+    d3.csv("stateCodes.csv", function(d) {
+        d.forEach(function(el) {
+            stateCodes[parseInt(el.id)] = el.abb;
+        });
+    });
+
+    //Generates the rainfall array.
+    d3.csv("rainfall.csv", function(d) {
+        d.forEach(function(el) {
+            rainfall[el.state] = {mm:el.mm, rank: el.rank};
+        });
+    });
+
     //Creates a working set of data for our map of the United States.
     d3.json("us.json", function(error, us) {
        svg.insert("path", ".landPath")
@@ -159,11 +277,20 @@
           .attr("class", "land")
           .attr("d", path); 
           
-      svg.insert("path", ".graticule")
+      /*svg.insert("path", ".graticule")
           .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
           .attr("class", "state-boundary")
-          .attr("d", path);
-        
+          .attr("d", path);*/
+
+      svg.selectAll(".state-boundary")
+        .data(topojson.feature(us, us.objects.states).features)
+        .enter()
+        .append("path")
+        .attr("class", "state-boundary")
+        .attr("d", path);
+
+        test8 = topojson.feature(us, us.objects.states).features;
+
         /**Part of test code to get border data*/
 
         //Following code collapses the topoJSON array to a normal array for use in coastal border calculations.
@@ -173,6 +300,7 @@
         var test4 = test3.concat.apply(test3, test2);
         var test5 = test3.concat.apply(test3, test4);
         test1 = test5;
+
 
         test1.forEach(function(el) {
                 pixelBorders.push(projection(el));
@@ -231,14 +359,6 @@
             });
 
         waterCoasts = pixelBordersFiltered;
-
-       /* var lineTest = d3.svg.line()
-                        .x(function(d) {return d[0];})
-                        .y(function(d) {return d[1];})
-                        .interpolate("linear");
-        svg.append("path")
-            .attr("d", lineTest(pixelBordersFiltered))
-            .attr("class", "land");*/
         /** ** */
 
         /**CONCLUSION: pixelBordersFiltered contains the pixel values of the borders of the United States. I will modularize later. **/
@@ -248,7 +368,6 @@
     d3.json("elevation.json", function(error, elevation) {
         var newProjEl = []; //New projection generated by projection function.
         var newEl; //New data to be stored into elevations array.
-        test8 = elevation.elevations;
         (elevation.elevations).forEach(function(el) {
             newProjEl = projection([el.x, el.y]); 
             if(!(newProjEl === null)) {
@@ -273,6 +392,12 @@
     });
 /** **** **/
 
+//Tooltip for hovering over state in rain mode.
+    tooltip = d3.select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+
 /** Creates slider and deals with slider interaction **/
     
     //Slider for propagating water flow change
@@ -296,13 +421,21 @@
         .attr("max", 52014)
         .attr("step", 1)
         .attr("value", 0);
-
+    
+    //Add checkbox for seeing state rainfall values
+    d3.select("body")
+        .append("button")
+        .attr("class", "rainButton")
+        .html("See state rainfalls");
+        
 
     d3.select("#elevationSlider").on("change", elevationChange); 
     d3.select("#noPropSlider").on("change", noPropChange);
 
+    //Deals with when the rainfall button is clicked.
+    d3.select(".rainButton")
+        .on("click", rainClick); 
 
-   
     //Helper function that given an input x and y pixel, checks to see if elevation level is below water elevation level
     //at that point in time.
     /*var helper = function(x, y, water) {
